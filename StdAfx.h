@@ -4,8 +4,4 @@
 
 #include <CryCore/Platform/platform.h>
 
-#ifdef CRY_PLATFORM_WINDOWS
-#include <CryCore/Platform/CryWindows.h>
-#endif
-
 #include "EditorCommon.h"
