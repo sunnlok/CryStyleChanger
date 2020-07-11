@@ -1,5 +1,8 @@
 A CryEngine Sandbox plugin that allows changing the Stylesheet as well as the Icons used.
 
+To use this plugin, place the **StyleChanger.dll** into:
+> {Your Engine Folder}/bin/win_x64/EditorPlugins
+
 ## Style
 The Stylesheet needs to be a valid .qss file. See the default [Sandbox stylesheet.qss](https://github.com/CRYTEK/CRYENGINE/blob/release/Editor/Styles/stylesheet.qss) for reference.
 ## Icons
