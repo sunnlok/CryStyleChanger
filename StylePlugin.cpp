@@ -18,6 +18,8 @@
 #include <QObject>
 #include <QIconEngine>
 #include <QtGui/private/qicon_p.h>
+#include "QResource"
+#include "IconPackManger.h"
 
 
 CStylePreferences gStylePreferences;
@@ -30,6 +32,7 @@ void OnStyleFileChanged() {
 }
 #pragma optimize( "", off )
 CStylePlugin::CStylePlugin()
+	: m_pPackManager(std::make_unique<IconPackManager>())
 {
 	g_pStylePlugin = this;
 
@@ -57,17 +60,6 @@ void CStylePlugin::OnStyleSettingsChanged()
 		m_pWatcher->addPath(m_styleSheetPath.c_str());
 		ReloadStyle();
 	}
-
-
-	auto& iconPacks = gStylePreferences.GetIconPacks();
-
-
-	const auto& currentPacks = m_iconPacks;
-	if (!std::equal(iconPacks.begin(), iconPacks.end(), currentPacks.begin(), currentPacks.end()))
-	{
-		m_iconPacks = iconPacks;
-		ReloadIcons();
-	}
 }
 
 
@@ -94,7 +86,7 @@ void CStylePlugin::ReloadStyle()
 {
 	if (m_styleSheetPath.empty())
 		return;
-
+	
 
 	QFile styleSheetFile(m_styleSheetPath.c_str());
 
@@ -105,83 +97,12 @@ void CStylePlugin::ReloadStyle()
 	}
 }
 
-template<typename T>
-void PatchQtObjectIcon(T* pClass)
-{
-	QIcon icon = pClass->icon();
-
-	if (icon.isNull() || !icon.data_ptr())
-		return;
-
-
-	QIconEngine* pEngine = static_cast<QIconPrivate*>(icon.data_ptr())->engine;
-
-
-	if (!pEngine || pEngine->key() != QLatin1String("CryPixmapIconEngine"))
-		return;
-
-	CryPixmapIconEngine* pCryIconEngine = static_cast<CryPixmapIconEngine*>(pEngine);
-
-	auto sizes = pCryIconEngine->availableSizes();
-	QString iconName;
-	if (!sizes.isEmpty())
-	{
-		auto size = sizes[0];
-
-		auto entry = pCryIconEngine->bestMatch(size, QIcon::Mode::Normal, QIcon::State::Off, false);
-		iconName = entry->fileName;
-	}
-
-
-	if (iconName.isEmpty())
-		return;
-
-	if (iconName.startsWith(":/icons/"))
-	{
-		iconName.replace(":/icons/", "icons:");		
-	}
-	if(!iconName.startsWith('"'))
-	{
-		//Patch full paths
-		//Todo: Add this.
-	}
-
-
-	pClass->setIcon(CryIcon(iconName));
-}
-
 
 void CStylePlugin::ReloadIcons()
 {
-	QStringList newSearchPaths;
-	for (auto& iconPath : m_iconPacks)
-	{
-		newSearchPaths.append(QDir::cleanPath(iconPath.path.c_str()));
-	}
-	newSearchPaths.append(":/icons");
-
-	QDir::setSearchPaths("icons", newSearchPaths);
-	QPixmapCache::clear();
-
-	auto widgets = qApp->allWidgets();
-	for (QWidget* widget : widgets)
-	{
-		
-		bool isButton = widget->inherits("QToolButton");
-		if (isButton)
-		{
-			auto button = static_cast<QToolButton*>(widget);
-			PatchQtObjectIcon(button);
-		}
-
-		auto actions = widget->actions();
-		for (auto pAction : actions)
-		{
-			PatchQtObjectIcon(pAction);
-		}
-		//widget->repaint();
-	}
+	m_pPackManager->ReloadIcons();
 }
+
 REGISTER_PLUGIN(CStylePlugin);
 
 
@@ -192,23 +113,16 @@ constexpr char* g_iconsFolder = "Editor/Icons/";
 CStylePreferences::CStylePreferences()
 	: SPreferencePage("Style Preferences", "General/Style")
 	, m_stylePath(PathUtil::Make(PathUtil::GetEnginePath(), g_styleSheetPath))
-	, m_iconPacks({ {PathUtil::Make(PathUtil::GetEnginePath(), g_iconsFolder)} })
 {
 
 }
-
-bool IconPack::Serialize(yasli::Archive& ar)
-{
-	return ar(Serialization::MakeResourceSelector<>(path, "IconPack"), "iconPack", "Icon Pack");
-}
-
 
 bool CStylePreferences::Serialize(yasli::Archive& ar)
 {
 	ar(Serialization::MakeResourceSelector<>(m_stylePath, "Style"), "stylesheet", "Stylesheet");
-	ar(m_iconPacks, "iconFolders", "Icon Folders");
-	ar(Serialization::ActionButton([&] { g_pStylePlugin->ReloadIcons(); }), "realoadIcons", "Reload Icons");
 
+	g_pStylePlugin->GetIconPackManager()->SerializePacks(ar);
+	
 	if (ar.isInput())
 		signalSettingsChanged();
 
@@ -238,25 +152,3 @@ SResourceSelectionResult StyleSelector(const SResourceSelectorContext& context, 
 	return result;
 }
 REGISTER_RESOURCE_SELECTOR("Style", StyleSelector, "")
-
-
-SResourceSelectionResult IconPackSelector(const SResourceSelectorContext& context, const char* previousValue)
-{
-	SResourceSelectionResult result{ false, previousValue };
-
-	// start in Sounds folder if no sound is selected
-	string startPath = PathUtil::GetPathWithoutFilename(previousValue);
-	if (startPath.empty())
-		startPath = PathUtil::Make(PathUtil::GetEnginePath(), "Editor/Icons");
-
-	auto fileName = QFileDialog::getExistingDirectory(context.parentWidget, "Select Icon Folder", startPath.c_str(), QFileDialog::ShowDirsOnly);
-
-	if (!fileName.isEmpty())
-	{
-		result.selectedResource = fileName.toStdString().c_str();
-		result.selectionAccepted = true;
-	}
-
-	return result;
-}
-REGISTER_RESOURCE_SELECTOR("IconPack", IconPackSelector, "")

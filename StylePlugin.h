@@ -6,16 +6,8 @@
 
 
 class QFileSystemWatcher;
+class IconPackManager;
 
-
-struct IconPack {
-
-	bool Serialize(yasli::Archive& ar);
-
-	bool operator==(const IconPack& other) const { return other.path == path; }
-
-	string path;
-};
 
 class CStylePlugin : public IPlugin , public IAutoEditorNotifyListener
 {
@@ -33,12 +25,17 @@ public:
 
 	void ReloadStyle();
 	void ReloadIcons();
+
+
+
+	IconPackManager* GetIconPackManager() const { return &*m_pPackManager; }
 private:
 
 	string m_styleSheetPath;
 
 	std::unique_ptr<QFileSystemWatcher> m_pWatcher;
-	std::vector<IconPack>				m_iconPacks;
+
+	std::unique_ptr<IconPackManager> m_pPackManager;
 };
 
 
@@ -48,12 +45,12 @@ public:
 	CStylePreferences();
 	bool Serialize(yasli::Archive& ar);
 
-
-
 	const string& GetStyleSheetPath() { return m_stylePath; }
-	const std::vector<IconPack>& GetIconPacks() { return m_iconPacks; }
 
 protected:
 	string					m_stylePath;
-	std::vector<IconPack>	m_iconPacks;
+	
+
+	
+
 };
