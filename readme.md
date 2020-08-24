@@ -1,4 +1,4 @@
-A CryEngine Sandbox plugin that allows that allows to completely change the visual appearance of the editor, be it the stylesheet or icons.
+A CryEngine Sandbox plugin that allows to completely change the visual appearance of the editor, be it the stylesheet or icons.
 
 To use this plugin, place the **StyleChanger.dll** into:
 > {Your Engine Folder}/bin/win_x64/EditorPlugins
