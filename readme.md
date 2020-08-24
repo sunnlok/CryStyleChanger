@@ -5,6 +5,8 @@ To use this plugin, place the **StyleChanger.dll** into:
 
 From then on you can change the visual appearance of the editor via the **Style** entry inside the preferences menu.
 
+![alt text](https://i.imgur.com/2G8TCtg.png)
+
 ## Style
 ---
 Allows loading of a custom stylesheet via the stylesheet option. The loaded stylesheet is refreshed via a filewatcher so changes are instantly updated.
